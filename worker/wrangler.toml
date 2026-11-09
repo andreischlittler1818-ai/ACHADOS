@@ -2,13 +2,12 @@ name = "achados-meli-oauth"
 main = "src/index.ts"
 compatibility_date = "2026-11-01"
 
-# Substitua o database_id pelo UUID que a Cloudflare fornecer.
 [[d1_databases]]
 binding = "DB"
 database_name = "achados-oauth"
-database_id = "SUBSTITUIR_PELO_DATABASE_ID"
+database_id = "68bafc4f-85a2-4574-b2e5-2f4e614f3fb9"
 
 [vars]
 FRONTEND_ORIGIN = "https://andreischlittler1818-ai.github.io"
-PUBLIC_BASE_URL = "https://SUBSTITUIR.workers.dev"
-# Não adicione segredos aqui. Configure via wrangler secret put.
+PUBLIC_BASE_URL = "https://achados-meli-oauth.andreischlittler1818.workers.dev"
+# Segredos: configurar pelo Cloudflare, jamais no GitHub.
