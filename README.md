@@ -57,3 +57,13 @@ O GitHub Pages pode hospedar a interface estática, mas **não** executará o se
 ## Avisos
 
 Preços dos produtos de exemplo não são preços atuais. O agendamento não realiza disparos. Dados no navegador podem ser perdidos ao limpar o armazenamento. O gerenciamento automático real **não é possível apenas com uma página estática do GitHub**.
+
+## Importar links de afiliado (v0.2)
+
+1. Na sua conta de afiliado do Mercado Livre, use o gerador oficial e copie o link comissionado.
+2. Abra **Produtos > Importar link de afiliado** no ACHADOS.
+3. Cole a URL HTTPS original e clique em **Importar link**. São aceitos domínios oficiais do Mercado Livre e o encurtador `meli.la`.
+4. Confira o formulário: complete **nome, preço e demais dados** manualmente. Imagens e preços **não** são coletados automaticamente. Clique em **Salvar produto**.
+5. Use **Criar post** para gerar um texto contendo a URL original preservada, inclusive parâmetros de rastreamento. Copie a URL cadastrada pelo botão disponível no cartão do produto.
+
+A validação apenas confere o domínio e o protocolo HTTPS; **não garante que o link seja comissionado ou que o produto esteja elegível**. Não são usadas senhas, cookies, scraping, nem uma API de afiliados não documentada. Links duplicados são recusados. O catálogo continua em `localStorage`, sem sincronização entre navegadores. Os produtos demonstrativos devem ser substituídos por links reais.
