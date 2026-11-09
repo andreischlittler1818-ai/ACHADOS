@@ -13,13 +13,13 @@ function validateMeliLink(raw:string):{valid:boolean;url:string;reason:string}{
   try {
     const u=new URL(raw.trim());
     if(u.protocol!=='https:' || u.username || u.password) return {valid:false,url:'',reason:'Use um link HTTPS seguro.'};
-    const host=u.hostname.toLowerCase().replace(/\\.$/,'');
+    const host=u.hostname.toLowerCase().replace(/\.$/,'');
     const domains=['mercadolivre.com.br','mercadolivre.com','mercadolibre.com','mercadolibre.com.ar','mercadolibre.com.mx','meli.la'];
     if(!domains.some(d=>host===d||host.endsWith('.'+d)))return {valid:false,url:'',reason:'Use um link oficial do Mercado Livre ou meli.la.'};
     return {valid:true,url:u.href,reason:'Link aceito. Confirme na Central de Afiliados se ele gera comissão.'};
   }catch{return {valid:false,url:'',reason:'Insira uma URL completa começando com https://.'}}
 }
-function productCode(url:string){const match=url.match(/(?:MLB[- ]?)(\\d{6,})/i);return match?'MLB'+match[1]:'';}
+function productCode(url:string){const match=url.match(/(?:MLB[- ]?)(\d{6,})/i);return match?'MLB'+match[1]:'';}
 const demo: {products:Product[];posts:Post[];schedules:Schedule[]}={products:[{id:'demo1',name:'Fone Bluetooth sem fio',category:'Eletrônicos',price:'129.90',oldPrice:'189.90',affiliateUrl:'https://www.mercadolivre.com.br/',image:'',description:'Modelo ilustrativo. Substitua por produto real e link válido de afiliado.'},{id:'demo2',name:'Cafeteira elétrica compacta',category:'Casa',price:'219.00',oldPrice:'299.00',affiliateUrl:'https://www.mercadolivre.com.br/',image:'',description:'Produto de demonstração.'}],posts:[],schedules:[]};
 function uid(){return crypto.randomUUID?.()||String(Date.now()+Math.random())};
 function load(){try{let v=localStorage.getItem(key);return v?JSON.parse(v):demo}catch{return demo}}
