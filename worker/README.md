@@ -2,6 +2,14 @@
 
 Este backend é **uma implementação inicial**, não uma integração ativada. A página estática no GitHub Pages não guarda segredos. A conta do Mercado Livre continua desconectada até que o próprio titular conclua a autorização.
 
+## Instalação existente via painel (ACHADOS)
+
+A conta já possui o Worker `achados-meli-oauth` e o banco D1 `achados-oauth`, com binding `DB` configurado pelo painel. O `wrangler.toml` foi atualizado com o ID de banco e URL pública reais. **Não crie outro banco nem reaplique as tabelas já criadas manualmente.**
+
+Em **Workers & Pages → achados-meli-oauth → Settings → Builds**, o repositório é `andreischlittler1818-ai/ACHADOS`, branch `main`, diretório raiz `/`, build command `cd worker && npm install && npm run check` e deploy command `cd worker && npx wrangler deploy`. Um novo commit na branch principal dispara o build. A implantação real depende das permissões do GitHub na Cloudflare; confira o registro do build antes de presumir sucesso.
+
+A URL de retorno cadastrada no Mercado Livre deve ser exatamente `https://achados-meli-oauth.andreischlittler1818.workers.dev/oauth/callback`. O callback só funcionará após o Worker do repositório ser publicado e os segredos configurados.
+
 ## Recursos
 
 - Fluxo OAuth Authorization Code + PKCE (S256) com `state` aleatório e uso único (10 minutos).
