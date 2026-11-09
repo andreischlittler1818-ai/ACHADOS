@@ -1,0 +1,16 @@
+{
+  "name": "achados-mercado-livre-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db": "wrangler d1 migrations apply achados-oauth --remote",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20261101.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.0.0"
+  }
+}
