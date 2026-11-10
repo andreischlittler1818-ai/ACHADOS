@@ -95,3 +95,14 @@ O Worker expõe dois endpoints autenticados com `x-owner-key`, consumidos exclus
 A aba **Mercado Livre** apresenta resultados com foto, preço quando disponível e identificação. Para cadastrar, o usuário **precisa** inserir o link comissionado que gerou no Hub de Afiliados, validá-lo e conferir os dados. A consulta não confirma comissão, elegibilidade, preço atual no momento da futura divulgação, nem cria links rastreados. Não usa scraping nem servidores terceiros não autorizados.
 
 A busca requer conexão OAuth existente e chave administrativa informada na sessão. Os dados cadastrados continuam no navegador (`localStorage`).
+
+## Gerar link de afiliado — fluxo assistido
+
+Na aba **Mercado Livre**, após escolher um produto em **Explorar produtos**, clique **Associar link de afiliado**. O formulário ficará visível acima dos resultados, com os botões:
+
+1. **Copiar URL do anúncio:** disponível apenas quando a API oficial fornece um permalink (um produto de catálogo pode não ter um anúncio específico).
+2. **Ver anúncio:** abre a página do anúncio numa nova aba, quando disponível.
+3. **Abrir Central de Afiliados:** abre o Hub oficial do Mercado Livre. Faça login, confirme a elegibilidade e gere o link comissionado por lá.
+4. Cole o link `meli.la` ou `mercadolivre.com.br` gerado na sua conta e clique **Associar ao ACHADOS**. O cadastro abre o formulário em Produtos para conferir imagem, título e preço antes de salvar.
+
+O ACHADOS **não** gera comissão por API, não substitui links normais por comissionados e não tem acesso garantido à seleção privada do Hub. Preserve o link comissionado original fornecido pelo Mercado Livre.

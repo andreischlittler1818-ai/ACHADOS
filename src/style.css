@@ -19,3 +19,10 @@
 .product .productbody{position:relative;background:#fff;z-index:1;flex:1;overflow-wrap:anywhere}
 .affiliateSelection{scroll-margin-top:24px;outline:2px solid #d5cffd;outline-offset:2px;background:#f4f1ff}
 .affiliateSelection:focus{outline:3px solid #7469e5}
+
+/* Ações do fluxo assistido de afiliados */
+.assistedActions{margin:14px 0;align-items:stretch}
+.secondaryAction{border:1px solid #dce1ed;background:#fff;border-radius:9px;padding:10px 14px;color:#313d54;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;font-size:14px}
+.secondaryAction:hover{background:#f0f3fb}
+.assistedActions button:disabled{opacity:.5}
+@media(max-width:720px){.assistedActions{flex-direction:column}.assistedActions button,.assistedActions .secondaryAction{width:100%}}
