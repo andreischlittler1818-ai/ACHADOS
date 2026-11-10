@@ -92,7 +92,26 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
     const raw=await resp.json();
     const item=normalizeMlItem(raw,'listing');
     if(!item)return json({error:'A API retornou um anúncio sem dados suficientes.'},502,ch);
-    return json({item,affiliateEligible:null,source:'Mercado Livre /items/{id}',note:'O endereço do anúncio não é necessariamente um link de afiliado.'},200,ch);
+    // Os campos price/base_price da API /items estão em descontinuação.
+    // Só utilizamos preços do endpoint /items/{id}/prices quando disponíveis e aplicáveis ao marketplace BR.
+    item.price=null;
+    let priceNote='Preço não disponibilizado pela API para este anúncio. Confira na página do Mercado Livre.';
+    try{
+     const pricesResponse=await fetch('https://api.mercadolibre.com/items/'+encodeURIComponent(id)+'/prices',{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+     if(pricesResponse.ok){
+      const data=await pricesResponse.json() as {prices?:Array<{amount?:number;currency_id?:string;type?:string;conditions?:{context_restrictions?:string[];start_time?:string|null;end_time?:string|null}}>} ;
+      const now=Date.now();
+      const available=(data.prices||[]).filter(p=>{
+       const c=p.conditions;
+       const restrictions=c?.context_restrictions||[];
+       const validTime=(!c?.start_time||Date.parse(c.start_time)<=now)&&(!c?.end_time||Date.parse(c.end_time)>=now);
+       return p.currency_id==='BRL'&&typeof p.amount==='number'&&Number.isFinite(p.amount)&&p.amount>0&&validTime&&restrictions.every(x=>x==='channel_marketplace');
+      });
+      const picked=available.find(p=>p.type==='promotion')||available.find(p=>p.type==='standard');
+      if(picked){item.price=picked.amount!;priceNote='Preço retornado pela API oficial para o marketplace, sujeito a alterações e condições da oferta.'}
+     }
+    }catch{/* Preço é opcional e não impede a consulta do anúncio. */}
+    return json({item,affiliateEligible:null,source:'Mercado Livre /items/{id} e /items/{id}/prices',priceNote,note:'O endereço do anúncio não é necessariamente um link de afiliado.'},200,ch);
    }catch{return json({error:'Falha temporária ao consultar o anúncio.'},502,ch)}
   }
   if(u.pathname==='/api/me'&&request.method==='GET'){
