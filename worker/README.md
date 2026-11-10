@@ -112,3 +112,11 @@ O ACHADOS **não** gera comissão por API, não substitui links normais por comi
 A pesquisa por palavras-chave retorna **fichas técnicas** do catálogo, sem preço ou percentual de comissão. Para anúncios comerciais MLB a consulta usa `/items/{id}/sale_price?context=channel_marketplace` e, se indisponível, tenta `/items/{id}/prices`. Quando a API oferece `amount` e `regular_amount`, o sistema calcula o desconto percentual. Preços podem variar conforme o contexto e as permissões da API.
 
 O Programa de Afiliados ainda **não disponibilizou ao ACHADOS uma API oficial documentada de percentuais individuais de comissão**. No formulário de cadastro, informe manualmente a taxa exibida para aquele produto no seu Hub. O sistema calcula somente uma **estimativa matemática** de comissão por venda elegível (preço × percentual), não lucro nem receita efetiva, que dependem da validação e regras do Mercado Livre. Sem taxa, não mostra valor estimado. Confirme os valores antes de publicar.
+
+## Busca de anúncios comerciais (nova versão)
+
+A busca principal de produtos em **Mercado Livre → Explorar produtos** utiliza `GET /sites/MLB/search?q=...` por meio de `/api/products/listings`, permitindo consultar anúncios comerciais quando a API os disponibiliza à aplicação. Cada resultado indica preço e desconto apenas quando recebidos da API; valores podem variar conforme o contexto do consumidor.
+
+A opção alternativa **Pesquisar fichas de catálogo** mantém o recurso `/products/search`, que normalmente não apresenta preço de oferta. Em uma ficha de catálogo, o botão **Ver oferta comercial deste catálogo** utiliza `/products/{id}` e, quando presente, `buy_box_winner.item_id` para consultar o anúncio com `/items/{id}` e tentar obter preço via `/items/{id}/sale_price`. Nem todo produto possui buy box ou oferta consultável. Erros 403/404 são informados sem simular disponibilidade.
+
+**Essas consultas não garantem produto elegível a comissão.** Para divulgar, o usuário deve confirmar o produto no Hub de Afiliados, gerar seu link comissionado oficial e associá-lo no ACHADOS. O percentual de comissão continua informado manualmente pelo usuário.
