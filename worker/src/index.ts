@@ -81,6 +81,60 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
     return json({items,total:body.paging?.total??items.length,source:'Mercado Livre /products/search',affiliateEligible:null,note:'Resultados de catálogo, sem confirmação de comissão ou oferta ativa para o afiliado.'},200,ch);
    }catch{return json({error:'Falha temporária ao consultar a API do Mercado Livre.'},502,ch)}
   }
+
+  if(u.pathname==='/api/products/listings'&&request.method==='GET'){
+   const q=(u.searchParams.get('q')||'').trim();
+   if(q.length<3||q.length>90)return json({error:'Digite entre 3 e 90 caracteres.'},400,ch);
+   const token=await accountToken(env);
+   if(!token)return json({error:'Conecte sua conta Mercado Livre primeiro.'},401,ch);
+   const endpoint=new URL('https://api.mercadolibre.com/sites/MLB/search');
+   endpoint.searchParams.set('q',q);endpoint.searchParams.set('limit','12');
+   try{
+    const resp=await fetch(endpoint.href,{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+    if(!resp.ok)return json({error:resp.status===403?'O Mercado Livre restringiu a pesquisa pública de anúncios para esta aplicação. Tente consultar um anúncio por MLB ou ver a oferta associada a um produto de catálogo.':'Não foi possível pesquisar anúncios comerciais pela API oficial.',code:resp.status},502,ch);
+    const data=await resp.json() as {results?:unknown[]};
+    const items=Array.isArray(data.results)?data.results.map(x=>{
+      const item=normalizeMlItem(x,'listing');
+      if(item&&typeof x==='object'&&x!==null){
+       const raw=x as {original_price?:number|null;currency_id?:string};
+       if(raw.currency_id&&raw.currency_id!=='BRL')return null;
+       if(typeof raw.original_price==='number'&&item.price!==null&&raw.original_price>item.price)item.oldPrice=raw.original_price;
+      }
+      return item;
+    }).filter((x):x is MlListing=>x!==null):[];
+    return json({items,source:'Mercado Livre /sites/MLB/search',affiliateEligible:null,note:'Preços indicativos da busca, sujeitos a mudanças e condições de oferta. Comissão não informada.'},200,ch);
+   }catch{return json({error:'Falha temporária na consulta de anúncios.'},502,ch)}
+  }
+  if(u.pathname==='/api/products/catalog-offer'&&request.method==='GET'){
+   const id=(u.searchParams.get('id')||'').trim().toUpperCase();
+   if(!/^MLB\d{6,16}$/.test(id))return json({error:'Informe um código de produto de catálogo MLB válido.'},400,ch);
+   const token=await accountToken(env);
+   if(!token)return json({error:'Conecte sua conta Mercado Livre primeiro.'},401,ch);
+   try{
+    const productResponse=await fetch('https://api.mercadolibre.com/products/'+encodeURIComponent(id),{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+    if(!productResponse.ok)return json({error:'Não foi possível consultar o produto de catálogo.',code:productResponse.status},502,ch);
+    const product=await productResponse.json() as {buy_box_winner?:{item_id?:string}|null};
+    const winnerId=product.buy_box_winner?.item_id||'';
+    if(!/^MLB\d{6,16}$/.test(winnerId))return json({error:'Este produto não possui um anúncio vencedor disponibilizado pela API. Tente pesquisar anúncios ou localizar uma oferta no Mercado Livre.'},404,ch);
+    const itemResponse=await fetch('https://api.mercadolibre.com/items/'+encodeURIComponent(winnerId),{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+    if(!itemResponse.ok)return json({error:'A oferta associada não pôde ser consultada.',code:itemResponse.status},502,ch);
+    const raw=await itemResponse.json() as {original_price?:number|null;currency_id?:string};
+    const item=normalizeMlItem(raw,'listing');
+    if(!item||raw.currency_id!=='BRL')return json({error:'O anúncio associado não possui dados suficientes em reais.'},502,ch);
+    if(typeof raw.original_price==='number'&&item.price!==null&&raw.original_price>item.price)item.oldPrice=raw.original_price;
+    try{
+      const sale=await fetch('https://api.mercadolibre.com/items/'+encodeURIComponent(winnerId)+'/sale_price?context=channel_marketplace',{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+      if(sale.ok){
+       const price=await sale.json() as {amount?:number;regular_amount?:number;currency_id?:string};
+       if(price.currency_id==='BRL'&&typeof price.amount==='number'&&Number.isFinite(price.amount)&&price.amount>0){
+        item.price=price.amount;
+        item.oldPrice=typeof price.regular_amount==='number'&&price.regular_amount>price.amount?price.regular_amount:null;
+       }
+      }
+    }catch{/* Sem preço comercial adicional. */}
+    return json({item,source:'Mercado Livre /products/{id} buy_box_winner',affiliateEligible:null,note:'Anúncio associado ao catálogo. É necessário gerar um link comissionado no Hub de Afiliados.'},200,ch);
+   }catch{return json({error:'Falha temporária na consulta da oferta vinculada.'},502,ch)}
+  }
   if(u.pathname==='/api/products/item'&&request.method==='GET'){
    const id=(u.searchParams.get('id')||'').trim().toUpperCase();
    if(!/^MLB\d{6,16}$/.test(id))return json({error:'Informe um ID de anúncio MLB válido.'},400,ch);
