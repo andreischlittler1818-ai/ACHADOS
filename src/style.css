@@ -11,3 +11,11 @@
 .affiliateSelection{margin-top:20px;padding:20px;background:#f8f8ff;border:1px solid #e3e3fa;border-radius:12px}
 .affiliateSelection h3{margin:0 0 8px}
 .affiliateSelection .importRow{margin-top:14px}
+
+/* Corrige sobreposição das fotos e destaca o formulário de associação. */
+.product{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.product .thumb{flex:0 0 160px;min-height:160px;max-height:160px;overflow:hidden;position:relative}
+.product .thumb img{display:block;width:100%;height:100%;object-fit:contain;position:static;background:#f2f4f9}
+.product .productbody{position:relative;background:#fff;z-index:1;flex:1;overflow-wrap:anywhere}
+.affiliateSelection{scroll-margin-top:24px;outline:2px solid #d5cffd;outline-offset:2px;background:#f4f1ff}
+.affiliateSelection:focus{outline:3px solid #7469e5}
