@@ -106,3 +106,9 @@ Na aba **Mercado Livre**, após escolher um produto em **Explorar produtos**, cl
 4. Cole o link `meli.la` ou `mercadolivre.com.br` gerado na sua conta e clique **Associar ao ACHADOS**. O cadastro abre o formulário em Produtos para conferir imagem, título e preço antes de salvar.
 
 O ACHADOS **não** gera comissão por API, não substitui links normais por comissionados e não tem acesso garantido à seleção privada do Hub. Preserve o link comissionado original fornecido pelo Mercado Livre.
+
+## Informações comerciais e comissão estimada
+
+A pesquisa por palavras-chave retorna **fichas técnicas** do catálogo, sem preço ou percentual de comissão. Para anúncios comerciais MLB a consulta usa `/items/{id}/sale_price?context=channel_marketplace` e, se indisponível, tenta `/items/{id}/prices`. Quando a API oferece `amount` e `regular_amount`, o sistema calcula o desconto percentual. Preços podem variar conforme o contexto e as permissões da API.
+
+O Programa de Afiliados ainda **não disponibilizou ao ACHADOS uma API oficial documentada de percentuais individuais de comissão**. No formulário de cadastro, informe manualmente a taxa exibida para aquele produto no seu Hub. O sistema calcula somente uma **estimativa matemática** de comissão por venda elegível (preço × percentual), não lucro nem receita efetiva, que dependem da validação e regras do Mercado Livre. Sem taxa, não mostra valor estimado. Confirme os valores antes de publicar.
