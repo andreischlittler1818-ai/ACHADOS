@@ -84,3 +84,14 @@ Referências:
 - https://developers.mercadolivre.com.br/pt_br/mensagens-post-venda/autenticacao-e-autorizacao
 - https://developers.cloudflare.com/workers/get-started/guide/
 - https://developers.cloudflare.com/d1/
+
+## Explorar produtos (MVP)
+
+O Worker expõe dois endpoints autenticados com `x-owner-key`, consumidos exclusivamente pelo ACHADOS via CORS:
+
+- `GET /api/products/search?q=...`: pesquisa de produtos no catálogo via `/products/search?site_id=MLB&status=active&q=...`. Pode retornar catálogos incompletos ou bloqueados, conforme permissões da API.
+- `GET /api/products/item?id=MLB123456789`: consulta um anúncio específico em `/items/{id}`.
+
+A aba **Mercado Livre** apresenta resultados com foto, preço quando disponível e identificação. Para cadastrar, o usuário **precisa** inserir o link comissionado que gerou no Hub de Afiliados, validá-lo e conferir os dados. A consulta não confirma comissão, elegibilidade, preço atual no momento da futura divulgação, nem cria links rastreados. Não usa scraping nem servidores terceiros não autorizados.
+
+A busca requer conexão OAuth existente e chave administrativa informada na sessão. Os dados cadastrados continuam no navegador (`localStorage`).

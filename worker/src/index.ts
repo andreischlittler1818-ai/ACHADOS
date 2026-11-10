@@ -26,6 +26,26 @@ function landing(env:Env,ok:boolean){return env.FRONTEND_ORIGIN.replace(/\/$/,''
 async function exchange(env:Env,params:URLSearchParams):Promise<TokenReply>{const r=await fetch('https://api.mercadolibre.com/oauth/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','accept':'application/json'},body:params});if(!r.ok)throw Error('Falha de autorização do Mercado Livre ('+r.status+')');const data=await r.json() as TokenReply;if(!data.access_token||!data.refresh_token||!data.user_id)throw Error('Resposta de token incompleta');return data}
 async function save(env:Env,t:TokenReply){await env.DB.prepare('INSERT INTO ml_connection (id,user_id,ciphertext,expires_at,updated_at) VALUES (1,?,?,?,?) ON CONFLICT(id) DO UPDATE SET user_id=excluded.user_id,ciphertext=excluded.ciphertext,expires_at=excluded.expires_at,updated_at=excluded.updated_at').bind(String(t.user_id),await encrypt(env,JSON.stringify(t)),Date.now()+t.expires_in*1000,Date.now()).run()}
 async function connected(env:Env){return env.DB.prepare('SELECT user_id,expires_at FROM ml_connection WHERE id=1').first<{user_id:string;expires_at:number}>()}
+
+type MlListing={id:string;title:string;price:number|null;image:string;category:string;permalink:string;kind:'catalog'|'listing'};
+function normalizeMlItem(x:any,kind:'catalog'|'listing'):MlListing|null{
+ if(!x||typeof x!=='object'||typeof x.id!=='string'||typeof x.name!=='string'&&typeof x.title!=='string')return null;
+ const img=x.thumbnail||x.pictures?.[0]?.secure_url||x.pictures?.[0]?.url||x.pictures?.[0]?.max_size||'';
+ const title=String(x.title||x.name).slice(0,240);
+ const price=typeof x.price==='number'&&Number.isFinite(x.price)?x.price:null;
+ return {id:x.id,title,price,image:typeof img==='string'&&img.startsWith('https://')?img:'',category:typeof x.domain_id==='string'?x.domain_id:typeof x.category_id==='string'?x.category_id:'',permalink:typeof x.permalink==='string'&&x.permalink.startsWith('https://')?x.permalink:'',kind};
+}
+async function accountToken(env:Env){
+ const row=await env.DB.prepare('SELECT ciphertext,expires_at FROM ml_connection WHERE id=1').first<{ciphertext:string;expires_at:number}>();
+ if(!row)return null;
+ let token=JSON.parse(await decrypt(env,row.ciphertext)) as TokenReply;
+ if(row.expires_at<Date.now()+60000){
+  token=await exchange(env,new URLSearchParams({grant_type:'refresh_token',client_id:env.MELI_APP_ID,client_secret:env.MELI_CLIENT_SECRET,refresh_token:token.refresh_token}));
+  await save(env,token);
+ }
+ return token.access_token;
+}
+
 export default {async fetch(request:Request,env:Env):Promise<Response>{
  const u=new URL(request.url);const origin=request.headers.get('origin');const ch=cors(env,origin);
  if(u.pathname.startsWith('/api/')){
@@ -42,6 +62,39 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
    return json({authorizationUrl:auth.href},200,ch)
   }
   if(u.pathname==='/api/disconnect'&&request.method==='POST'){await env.DB.prepare('DELETE FROM ml_connection WHERE id=1').run();return json({connected:false},200,ch)}
+
+  if(u.pathname==='/api/products/search'&&request.method==='GET'){
+   const query=(u.searchParams.get('q')||'').trim();
+   if(query.length<3||query.length>90)return json({error:'Pesquise por 3 a 90 caracteres.'},400,ch);
+   const token=await accountToken(env);
+   if(!token)return json({error:'Conecte sua conta do Mercado Livre primeiro.'},401,ch);
+   const target=new URL('https://api.mercadolibre.com/products/search');
+   target.searchParams.set('site_id','MLB');
+   target.searchParams.set('status','active');
+   target.searchParams.set('q',query);
+   target.searchParams.set('limit','12');
+   try{
+    const resp=await fetch(target.toString(),{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+    if(!resp.ok)return json({error:resp.status===403?'Sua aplicação não tem permissão para pesquisar este catálogo.':'A API do Mercado Livre não retornou resultados. Confira as permissões.',code:resp.status},502,ch);
+    const body=await resp.json() as {results?:unknown[];paging?:{total?:number}};
+    const items=Array.isArray(body.results)?body.results.map(x=>normalizeMlItem(x,'catalog')).filter((x):x is MlListing=>x!==null).slice(0,12):[];
+    return json({items,total:body.paging?.total??items.length,source:'Mercado Livre /products/search',affiliateEligible:null,note:'Resultados de catálogo, sem confirmação de comissão ou oferta ativa para o afiliado.'},200,ch);
+   }catch{return json({error:'Falha temporária ao consultar a API do Mercado Livre.'},502,ch)}
+  }
+  if(u.pathname==='/api/products/item'&&request.method==='GET'){
+   const id=(u.searchParams.get('id')||'').trim().toUpperCase();
+   if(!/^MLB\d{6,16}$/.test(id))return json({error:'Informe um ID de anúncio MLB válido.'},400,ch);
+   const token=await accountToken(env);
+   if(!token)return json({error:'Conecte sua conta do Mercado Livre primeiro.'},401,ch);
+   try{
+    const resp=await fetch('https://api.mercadolibre.com/items/'+encodeURIComponent(id),{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+    if(!resp.ok)return json({error:'Não foi possível consultar este anúncio na API oficial.',code:resp.status},502,ch);
+    const raw=await resp.json();
+    const item=normalizeMlItem(raw,'listing');
+    if(!item)return json({error:'A API retornou um anúncio sem dados suficientes.'},502,ch);
+    return json({item,affiliateEligible:null,source:'Mercado Livre /items/{id}',note:'O endereço do anúncio não é necessariamente um link de afiliado.'},200,ch);
+   }catch{return json({error:'Falha temporária ao consultar o anúncio.'},502,ch)}
+  }
   if(u.pathname==='/api/me'&&request.method==='GET'){
     const row=await env.DB.prepare('SELECT ciphertext,expires_at FROM ml_connection WHERE id=1').first<{ciphertext:string;expires_at:number}>();
     if(!row)return json({error:'Conta não conectada'},404,ch);

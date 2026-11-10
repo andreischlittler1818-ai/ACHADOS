@@ -6,3 +6,8 @@
 .importRow input:focus{border-color:#7165ee;box-shadow:0 0 0 3px #eeeaff}
 .importMessage{padding:12px 14px;border-radius:9px;background:#eefcf4;color:#276348;font-size:13px;line-height:1.5}
 @media(max-width:720px){.importRow{flex-direction:column}}
+
+/* Explorar produtos */
+.affiliateSelection{margin-top:20px;padding:20px;background:#f8f8ff;border:1px solid #e3e3fa;border-radius:12px}
+.affiliateSelection h3{margin:0 0 8px}
+.affiliateSelection .importRow{margin-top:14px}
