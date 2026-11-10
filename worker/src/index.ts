@@ -27,13 +27,13 @@ async function exchange(env:Env,params:URLSearchParams):Promise<TokenReply>{cons
 async function save(env:Env,t:TokenReply){await env.DB.prepare('INSERT INTO ml_connection (id,user_id,ciphertext,expires_at,updated_at) VALUES (1,?,?,?,?) ON CONFLICT(id) DO UPDATE SET user_id=excluded.user_id,ciphertext=excluded.ciphertext,expires_at=excluded.expires_at,updated_at=excluded.updated_at').bind(String(t.user_id),await encrypt(env,JSON.stringify(t)),Date.now()+t.expires_in*1000,Date.now()).run()}
 async function connected(env:Env){return env.DB.prepare('SELECT user_id,expires_at FROM ml_connection WHERE id=1').first<{user_id:string;expires_at:number}>()}
 
-type MlListing={id:string;title:string;price:number|null;image:string;category:string;permalink:string;kind:'catalog'|'listing'};
+type MlListing={id:string;title:string;price:number|null;oldPrice:number|null;image:string;category:string;permalink:string;kind:'catalog'|'listing'};
 function normalizeMlItem(x:any,kind:'catalog'|'listing'):MlListing|null{
  if(!x||typeof x!=='object'||typeof x.id!=='string'||typeof x.name!=='string'&&typeof x.title!=='string')return null;
  const img=x.thumbnail||x.pictures?.[0]?.secure_url||x.pictures?.[0]?.url||x.pictures?.[0]?.max_size||'';
  const title=String(x.title||x.name).slice(0,240);
  const price=typeof x.price==='number'&&Number.isFinite(x.price)?x.price:null;
- return {id:x.id,title,price,image:typeof img==='string'&&img.startsWith('https://')?img:'',category:typeof x.domain_id==='string'?x.domain_id:typeof x.category_id==='string'?x.category_id:'',permalink:typeof x.permalink==='string'&&x.permalink.startsWith('https://')?x.permalink:'',kind};
+ return {id:x.id,title,price,oldPrice:null,image:typeof img==='string'&&img.startsWith('https://')?img:'',category:typeof x.domain_id==='string'?x.domain_id:typeof x.category_id==='string'?x.category_id:'',permalink:typeof x.permalink==='string'&&x.permalink.startsWith('https://')?x.permalink:'',kind};
 }
 async function accountToken(env:Env){
  const row=await env.DB.prepare('SELECT ciphertext,expires_at FROM ml_connection WHERE id=1').first<{ciphertext:string;expires_at:number}>();
@@ -96,7 +96,21 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
     // Só utilizamos preços do endpoint /items/{id}/prices quando disponíveis e aplicáveis ao marketplace BR.
     item.price=null;
     let priceNote='Preço não disponibilizado pela API para este anúncio. Confira na página do Mercado Livre.';
+    // /sale_price descreve o preço final e o valor regular (quando API disponibiliza).
+    // Esses valores não representam a comissão do afiliado.
     try{
+     const sales=await fetch('https://api.mercadolibre.com/items/'+encodeURIComponent(id)+'/sale_price?context=channel_marketplace',{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+     if(sales.ok){
+      const detail=await sales.json() as {amount?:number;regular_amount?:number;currency_id?:string};
+      if(detail.currency_id==='BRL'&&typeof detail.amount==='number'&&Number.isFinite(detail.amount)&&detail.amount>0){
+       item.price=detail.amount;
+       item.oldPrice=typeof detail.regular_amount==='number'&&Number.isFinite(detail.regular_amount)&&detail.regular_amount>detail.amount?detail.regular_amount:null;
+       priceNote='Preço comercial consultado em /sale_price; valores podem variar conforme condições da compra.';
+      }
+     }
+    }catch{/* ausência de preço não deve bloquear o produto */}
+
+    if(item.price===null)try{
      const pricesResponse=await fetch('https://api.mercadolibre.com/items/'+encodeURIComponent(id)+'/prices',{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
      if(pricesResponse.ok){
       const data=await pricesResponse.json() as {prices?:Array<{amount?:number;currency_id?:string;type?:string;conditions?:{context_restrictions?:string[];start_time?:string|null;end_time?:string|null}}>} ;
@@ -111,7 +125,7 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
       if(picked){item.price=picked.amount!;priceNote='Preço retornado pela API oficial para o marketplace, sujeito a alterações e condições da oferta.'}
      }
     }catch{/* Preço é opcional e não impede a consulta do anúncio. */}
-    return json({item,affiliateEligible:null,source:'Mercado Livre /items/{id} e /items/{id}/prices',priceNote,note:'O endereço do anúncio não é necessariamente um link de afiliado.'},200,ch);
+    return json({item,affiliateEligible:null,source:'Mercado Livre /items/{id}/sale_price e /prices',priceNote,note:'O endereço do anúncio não é necessariamente um link de afiliado.'},200,ch);
    }catch{return json({error:'Falha temporária ao consultar o anúncio.'},502,ch)}
   }
   if(u.pathname==='/api/me'&&request.method==='GET'){
